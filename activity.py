@@ -143,6 +143,13 @@ CONN_INTERFACE = TelepathyGLib.IFACE_CONNECTION
 CONN_INTERFACE_ALIASING = TelepathyGLib.IFACE_CONNECTION_INTERFACE_ALIASING
 
 
+def _format_voice_display_name(voice_name):
+    '''Format voice name for display by removing the prefix (e.g., af_heart -> heart)'''
+    if '_' in voice_name and len(voice_name) > 3:
+        return voice_name[3:]
+    return voice_name
+
+
 def _luminance(color):
     ''' Calculate luminance value '''
     return int(color[1:3], 16) * 0.3 + int(color[3:5], 16) * 0.6 + \
@@ -817,7 +824,8 @@ class SpeakAIActivity(activity.Activity):
             label = Gtk.Label()
             label.set_use_markup(True)
             label.set_justify(Gtk.Justification.LEFT)
-            label.set_markup('<span size="large">%s</span>' % voice_name)
+            display_name = _format_voice_display_name(voice_name)
+            label.set_markup('<span size="large">%s</span>' % display_name)
             alignment = Gtk.Alignment.new(0, 0, 0, 0)
             alignment.add(label)
             label.show()
@@ -858,7 +866,8 @@ class SpeakAIActivity(activity.Activity):
             label = Gtk.Label()
             label.set_use_markup(True)
             label.set_justify(Gtk.Justification.LEFT)
-            label.set_markup('<span size="large">%s</span>' % voice_name)
+            display_name = _format_voice_display_name(voice_name)
+            label.set_markup('<span size="large">%s</span>' % display_name)
             alignment = Gtk.Alignment.new(0, 0, 0, 0)
             alignment.add(label)
             label.show()
