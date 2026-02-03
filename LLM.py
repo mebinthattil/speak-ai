@@ -10,10 +10,25 @@ from sugar3.activity.activity import get_activity_root
 API_URL = "https://ai.sugarlabs.org/ask-llm-prompted"
 
 # Load API key from Sugar activity root
-def _get_api_key():
+def get_api_key_path():
+    """Get the path to the API key file in Sugar activity root."""
     data_dir = os.path.join(get_activity_root(), 'data')
     os.makedirs(data_dir, exist_ok=True)
-    api_key_path = os.path.join(data_dir, 'API_KEY.txt')
+    return os.path.join(data_dir, 'API_KEY.txt')
+
+def save_api_key(api_key):
+    """Save the API key to the activity data directory."""
+    api_key_path = get_api_key_path()
+    try:
+        with open(api_key_path, "w") as f:
+            f.write(api_key.strip())
+        return True
+    except Exception as e:
+        logging.error(f"Error saving API key: {e}")
+        return False
+
+def _get_api_key():
+    api_key_path = get_api_key_path()
     try:
         with open(api_key_path, "r") as f:
             return f.read().strip()
@@ -23,6 +38,12 @@ def _get_api_key():
     except Exception as e:
         logging.error(f"Error reading API key: {e}")
         return None
+
+def reload_api_key():
+    """Reload the API key from disk. Call after saving a new key."""
+    global API_KEY
+    API_KEY = _get_api_key()
+    return API_KEY
 
 API_KEY = _get_api_key()
 

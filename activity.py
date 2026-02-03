@@ -93,7 +93,7 @@ try:
 except ImportError:
     USING_BRAIN = True
 
-from LLM import is_connected, ask_llm_prompted, DEFAULT_PROMPT
+from LLM import is_connected, ask_llm_prompted, DEFAULT_PROMPT, save_api_key, reload_api_key, API_KEY
 from GenAI import is_profane
 
 SERVICE = 'org.sugarlabs.Speak'
@@ -185,6 +185,47 @@ def _is_tablet_mode():
     return False
 
 
+def _show_api_key_dialog(parent):
+    """Show a dialog to input the API key. Returns the key or None if cancelled."""
+    dialog = Gtk.Dialog(
+        title=_("API Key Required"),
+        parent=parent,
+        modal=True,
+        destroy_with_parent=True
+    )
+    dialog.add_button(_("Cancel"), Gtk.ResponseType.CANCEL)
+    dialog.add_button(_("Add"), Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.OK)
+
+    content_area = dialog.get_content_area()
+    content_area.set_spacing(10)
+    content_area.set_margin_start(20)
+    content_area.set_margin_end(20)
+    content_area.set_margin_top(20)
+    content_area.set_margin_bottom(10)
+
+    # Message label
+    label = Gtk.Label()
+    label.set_markup(_("<b>API Key not found</b>\n\nPlease enter your SugarLabs AI API key to enable the chatbot feature:"))
+    label.set_line_wrap(True)
+    label.set_justify(Gtk.Justification.CENTER)
+    content_area.pack_start(label, False, False, 0)
+
+    # API key entry
+    entry = Gtk.Entry()
+    entry.set_placeholder_text(_("Enter API key here..."))
+    entry.set_visibility(True)
+    entry.set_activates_default(True)
+    content_area.pack_start(entry, False, False, 0)
+
+    dialog.show_all()
+    response = dialog.run()
+    api_key = entry.get_text().strip() if response == Gtk.ResponseType.OK else None
+    dialog.destroy()
+
+    return api_key
+
+
 class SpeakAIActivity(activity.Activity):
     def __init__(self, handle):
         super(SpeakAIActivity, self).__init__(handle)
@@ -212,6 +253,9 @@ class SpeakAIActivity(activity.Activity):
         with open('personas.json', 'r') as f:
             self._personas = json.load(f)
         self._current_persona = 'Jane'
+
+        # Check for API key and prompt if not found
+        self._check_api_key()
 
         # make an audio device for playing back and rendering audio
         self.connect('notify::active', self._active_cb)
@@ -426,6 +470,21 @@ class SpeakAIActivity(activity.Activity):
                                        % self.owner.props.nick)
         self._set_idle_phrase(speak=False)
         self._first_time = False
+
+    def _check_api_key(self):
+        """Check if API key exists, prompt user to enter one if not."""
+        if API_KEY is None:
+            # Use GLib.idle_add to show dialog after main loop starts
+            def show_dialog():
+                api_key = _show_api_key_dialog(self)
+                if api_key:
+                    if save_api_key(api_key):
+                        reload_api_key()
+                        logger.info("API key saved successfully")
+                    else:
+                        logger.error("Failed to save API key")
+                return False  # Don't repeat
+            GLib.idle_add(show_dialog)
 
     def read_file(self, file_path):
         self._cfg = json.loads(open(file_path, 'r').read())
