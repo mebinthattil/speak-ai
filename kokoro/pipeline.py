@@ -1,4 +1,5 @@
 from .model import KModel
+from .utils import get_sugar_cache_dir, get_bundled_voices_dir, BUNDLED_VOICES
 from dataclasses import dataclass
 from huggingface_hub import hf_hub_download
 from loguru import logger
@@ -8,14 +9,6 @@ import re
 import torch
 import os
 
-from sugar3.activity.activity import get_activity_root
-
-
-def get_sugar_cache_dir():
-    """Get the Sugar activity root cache directory for HuggingFace downloads."""
-    cache_dir = os.path.join(get_activity_root(), 'data', 'kokoro_cache')
-    os.makedirs(cache_dir, exist_ok=True)
-    return cache_dir
 
 ALIASES = {
     'en-us': 'a',
@@ -155,14 +148,29 @@ class KPipeline:
     def load_single_voice(self, voice: str):
         if voice in self.voices:
             return self.voices[voice]
+        
+        f = None
         if voice.endswith('.pt'):
+            # Direct path to voice file
             f = voice
-        else:
-            f = hf_hub_download(repo_id=self.repo_id, filename=f'voices/{voice}.pt', cache_dir=get_sugar_cache_dir())
+        elif voice in BUNDLED_VOICES:
+            # Use bundled voice file - no download needed
+            bundled_path = os.path.join(get_bundled_voices_dir(), f'{voice}.pt')
+            if os.path.exists(bundled_path):
+                f = bundled_path
+                logger.debug(f'Loading bundled voice: {voice} from {f}')
+            else:
+                logger.warning(f'Bundled voice {voice} not found at {bundled_path}, will try HF download')
+        
+        if f is None:
+            # Download from HuggingFace for non-bundled voices
+            cache_dir = get_sugar_cache_dir()
+            f = hf_hub_download(repo_id=self.repo_id, filename=f'voices/{voice}.pt', cache_dir=cache_dir)
             if not voice.startswith(self.lang_code):
                 v = LANG_CODES.get(voice, voice)
                 p = LANG_CODES.get(self.lang_code, self.lang_code)
                 logger.warning(f'Language mismatch, loading {v} voice into {p} pipeline.')
+        
         pack = torch.load(f, weights_only=True)
         self.voices[voice] = pack
         return pack

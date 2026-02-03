@@ -1026,31 +1026,41 @@ class SpeakAIActivity(activity.Activity):
             Gtk.main_iteration()
 
         def async_check_and_update():
+            from kokoro.utils import get_sugar_cache_dir, BUNDLED_VOICES, get_bundled_voices_dir
             kokoro_pipeline = speech.get_speech().kokoro_pipeline
             is_local = False
-            if kokoro_pipeline:
-                if not is_local:
-                    try:
-                        import huggingface_hub
-                        repo_id = kokoro_pipeline.repo_id
-                        message = _('This voice is being downloaded, please wait')
-                        info_label.set_markup('<span foreground="blue" size="large">%s</span>' % message)
-                        voice_path = huggingface_hub.hf_hub_download(
-                            repo_id=repo_id,
-                            filename=f'voices/{voice_name}.pt',
-                            cache_dir=os.path.join(activity.get_activity_root(), 'data', 'kokoro_cache'),
-                            force_download=False,
-                            resume_download=False
-                        )
-                        is_local = os.path.exists(voice_path)
-                    except ImportError:
-                        message = _('Hugging Face Hub is not installed')
-                        info_label.set_markup('<span foreground="red" size="large">%s</span>' % message)
-                    except huggingface_hub.errors.LocalEntryNotFoundError:
-                        message = _("Can't download voice as there's no internet connection")
-                        info_label.set_markup('<span foreground="red" size="large">%s</span>' % message)
+            
+            # Check if this is a bundled voice
+            if voice_name in BUNDLED_VOICES:
+                bundled_path = os.path.join(get_bundled_voices_dir(), f'{voice_name}.pt')
+                is_local = os.path.exists(bundled_path)
+                if is_local:
+                    message = _('Loading bundled voice')
+                    info_label.set_markup('<span foreground="green" size="large">%s</span>' % message)
+            elif kokoro_pipeline:
+                try:
+                    import huggingface_hub
+                    repo_id = kokoro_pipeline.repo_id
+                    message = _('This voice is being downloaded, please wait')
+                    info_label.set_markup('<span foreground="blue" size="large">%s</span>' % message)
+                    cache_dir = get_sugar_cache_dir()
+                    voice_path = huggingface_hub.hf_hub_download(
+                        repo_id=repo_id,
+                        filename=f'voices/{voice_name}.pt',
+                        cache_dir=cache_dir,
+                        force_download=False,
+                        resume_download=False
+                    )
+                    is_local = os.path.exists(voice_path)
+                except ImportError:
+                    message = _('Hugging Face Hub is not installed')
+                    info_label.set_markup('<span foreground="red" size="large">%s</span>' % message)
+                except huggingface_hub.errors.LocalEntryNotFoundError:
+                    message = _("Can't download voice as there's no internet connection")
+                    info_label.set_markup('<span foreground="red" size="large">%s</span>' % message)
             else:
                 is_local = True
+
 
             if is_local:
                 message = _('Changing voice, please wait')
