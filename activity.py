@@ -978,7 +978,7 @@ class SpeakAIActivity(activity.Activity):
                         voice_path = huggingface_hub.hf_hub_download(
                             repo_id=repo_id,
                             filename=f'voices/{voice_name}.pt',
-                            cache_dir=None,
+                            cache_dir=os.path.join(activity.get_activity_root(), 'data', 'kokoro_cache'),
                             force_download=False,
                             resume_download=False
                         )
