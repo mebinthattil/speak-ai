@@ -797,10 +797,16 @@ class SpeakAIActivity(activity.Activity):
         return facebar
 
     def _make_kokoro(self):
+        def _format_voice_display_name(voice_name):
+            '''Format voice name for display by removing the prefix (e.g., af_heart -> heart)'''
+            if '_' in voice_name and len(voice_name) > 3:
+                return voice_name[3:]
+            return voice_name
+
         self._kokoro_voice_evboxes = {}
         self._kokoro_voice_box = Gtk.VBox()
 
-        # Add heading for DEFAULT VOICES
+        # Add heading for DEFAULT VOICES(heart, alloy and aoede)
         default_heading = Gtk.Label()
         default_heading.set_markup('<b>DEFAULT VOICES</b>')
         default_heading.set_justify(Gtk.Justification.CENTER)
@@ -817,7 +823,8 @@ class SpeakAIActivity(activity.Activity):
             label = Gtk.Label()
             label.set_use_markup(True)
             label.set_justify(Gtk.Justification.LEFT)
-            label.set_markup('<span size="large">%s</span>' % voice_name)
+            display_name = _format_voice_display_name(voice_name)
+            label.set_markup('<span size="large">%s</span>' % display_name)
             alignment = Gtk.Alignment.new(0, 0, 0, 0)
             alignment.add(label)
             label.show()
@@ -858,7 +865,8 @@ class SpeakAIActivity(activity.Activity):
             label = Gtk.Label()
             label.set_use_markup(True)
             label.set_justify(Gtk.Justification.LEFT)
-            label.set_markup('<span size="large">%s</span>' % voice_name)
+            display_name = _format_voice_display_name(voice_name)
+            label.set_markup('<span size="large">%s</span>' % display_name)
             alignment = Gtk.Alignment.new(0, 0, 0, 0)
             alignment.add(label)
             label.show()
@@ -965,7 +973,7 @@ class SpeakAIActivity(activity.Activity):
                     try:
                         import huggingface_hub
                         repo_id = kokoro_pipeline.repo_id
-                        message = _('This voice is being downloaded, please wait')
+                        message = _('Getting my new voice ready...')
                         info_label.set_markup('<span foreground="blue" size="large">%s</span>' % message)
                         voice_path = huggingface_hub.hf_hub_download(
                             repo_id=repo_id,
@@ -979,7 +987,7 @@ class SpeakAIActivity(activity.Activity):
                         message = _('Hugging Face Hub is not installed')
                         info_label.set_markup('<span foreground="red" size="large">%s</span>' % message)
                     except huggingface_hub.errors.LocalEntryNotFoundError:
-                        message = _("Can't download voice as there's no internet connection")
+                        message = _("I need to be connected to the internet to get new voices...")
                         info_label.set_markup('<span foreground="red" size="large">%s</span>' % message)
             else:
                 is_local = True
@@ -995,7 +1003,7 @@ class SpeakAIActivity(activity.Activity):
 
                 # Actually set the voice (may trigger download from Hugging Face Hub)
                 speech.get_speech().set_kokoro_voice(voice_name)
-                self.face.say_notification(_('Kokoro voice changed'))
+                self.face.say_notification(_('This is my new voice!'))
 
             while Gtk.events_pending():
                 Gtk.main_iteration()
