@@ -1,6 +1,6 @@
 from .istftnet import Decoder
 from .modules import CustomAlbert, ProsodyPredictor, TextEncoder
-from .pipeline import get_sugar_cache_dir
+from .utils import get_sugar_cache_dir
 from dataclasses import dataclass
 from huggingface_hub import hf_hub_download
 from loguru import logger
